@@ -10,13 +10,15 @@ FinishedProcesses=[]
 
 MemoryProcessCount=[]
 
+TotalMemorySpace= sum(PartitionList)
+
 
 
 def main_menu():
     print("Simulador de Ingreso de procesos en una memoria principal particionada")
     print("1. Imprimir proceso: ")
     print("2. Ingresar proceso: ")
-    print("3. Mostrar proceso: ")
+    print("3. Mostrar cola de procesos en espera: ")
     print("4. Sacar proceso: ")
     print("5. Terminar: ")
 
@@ -32,11 +34,12 @@ def main_menu():
         main_menu()
 
     elif opcion == '3':
-        ShowWaitinListProcesses()
+        ShowWaitinListProcesses(WaitingList)
     elif opcion == '4':
         RemoveProcess()
+
     elif opcion == '5':
-        FinishedProcesses()
+        FinishProgram()
     else:
         print("Opción invalida, Por Favor seleccione un numero del 1 al 5")
         main_menu()
@@ -57,21 +60,34 @@ def CheckAvailability(ProcessAvailability):
 
 
 def CheckSize(AvailableList,PartitionListSize,ProcessSize):
+
     FilteredElements = [PartitionListSize[i] for i in AvailableList]
-    FilteredElements =[item - ProcessSize for item in FilteredElements]
 
-    SizeListDiffDict=dict(zip(AvailableList,FilteredElements))
+    SizeListDict = dict(zip(AvailableList, FilteredElements))
 
-    SizeListDiffDict = {key: value for key, value in SizeListDiffDict.items() if value >= 0}
+    MaxSizeAvailable=sum(FilteredElements)
 
-    if len(SizeListDiffDict)<=0:
-        print("Necesitas liberar un espacio para introducir el proceso")
-        return None
+    if ProcessSize>= MaxSizeAvailable:
+        print("------------------------------------------------------------------------------------------------------------------------")
+        print("Necesitas más espacio en memoria para introducir el proceso. Intenta eliminar uno o mas espacios para liberar la memoria")
+        print("------------------------------------------------------------------------------------------------------------------------")
 
-    else:
-        min_key = min(SizeListDiffDict, key=lambda k: SizeListDiffDict[k])
-        min_value = SizeListDiffDict[min_key]
-        return min_key
+    if ProcessSize<=MaxSizeAvailable:
+
+        SizeCombine=0
+        AvailableMemorySpaceKeys=[]
+
+        while ProcessSize> SizeCombine:
+            min_key = min(SizeListDict, key=lambda k: SizeListDict[k])
+            min_value = SizeListDict[min_key]
+            AvailableMemorySpaceKeys.append(min_key)
+            SizeCombine+=min_value
+            del SizeListDict[min_key]
+
+        return AvailableMemorySpaceKeys
+
+
+
 
 
 
@@ -85,27 +101,37 @@ def ProcessInput(AvailabilityList,PartitionList):
     WaitingList.append(ProcessInputDict)
 
     PartitionAvailable=CheckSize(CheckAvailability(AvailabilityList), PartitionList, ProcessSize)
+    if PartitionAvailable == None and ProcessSize >= TotalMemorySpace:
+        print("El proceso exede el maximo de la memoria disponible")
+        WaitingList.pop()
 
-    if PartitionAvailable == None:
+    elif PartitionAvailable == None:
         print("El proceso queda a la espera de una particion libre")
     else:
         MemoryProcessCount.append(True)
-        PrincipalMemory[PartitionAvailable]= WaitingList.pop()
-        AvailabilityList[PartitionAvailable] = False
+        WaitingTemp=WaitingList.pop()
 
-        nuevoingreso=input("Deseas Ingresar otra instruccion (Y/N): ")
+        for PartitionKey in PartitionAvailable:
+            PrincipalMemory[PartitionKey]=WaitingTemp
+            AvailabilityList[PartitionKey]=False
 
-        if nuevoingreso == "Y":
+        nuevoingreso=input("Si deseas Ingresar otra instruccion presiona Y de lo contrario presiona cualquier tecla para regresar al menu principal: ")
+
+        if nuevoingreso == "Y" or nuevoingreso=="y":
             ProcessInput(AvailabilityList,PartitionList)
-        elif nuevoingreso =="N":
+        else:
             print("Volviendo al ménu")
+            main_menu()
+
 
 
 
 
 def RemoveProcess():
+    print(len(CheckAvailability(AvailabilityList)))
 
-    if len(CheckAvailability())>0:
+
+    if len(CheckAvailability(AvailabilityList))>0 and len(CheckAvailability(AvailabilityList))<=7:
         ProcessNumber=input("Seleccione el numero de proceso que desea sacar (Opcioned validas (1-7)")
 
         FinishedProcesses.append(PrincipalMemory[ProcessNumber])
@@ -113,19 +139,45 @@ def RemoveProcess():
         AvailabilityList[ProcessNumber]=True
 
 
+
+        nuevoingreso = input("Deseas remover otra instruccion (Y/N): ")
+
+        if nuevoingreso == "Y" or nuevoingreso =="y":
+            RemoveProcess()
+        elif nuevoingreso == "N" or nuevoingreso=="n":
+            print("Volviendo al ménu principal")
+
     else:
+        print("-------------------------------------")
         print("No hay procesos en cola para remover")
+        print("-------------------------------------")
+
+        main_menu()
 
 
 def FinishProgram():
+    print("---------------------------------------------------------------")
+    print("Se termino el programa")
     print(f'Se cargaron {len(MemoryProcessCount)} en memoria principal')
     print(f'Se terminaron {len(FinishedProcesses)} procesos antes de terminar la simulacion')
     print(f'La Cantidad de procesos que quedaron sin ser ejecutados son  {len(WaitingList)} en memoria principal')
+    print("---------------------------------------------------------------")
 
 
 
-def ShowWaitinListProcesses():
-    return print(WaitingList)
+def ShowWaitinListProcesses(WaitingList):
+
+    if len(WaitingList)>0:
+        print("---------------------------------------------------------------")
+        print("Lista de procesos en espera para entrar en la memoria principal")
+        print(WaitingList)
+        print("---------------------------------------------------------------")
+        main_menu()
+    else:
+        print("----------------------------------")
+        print("No hay procesos en lista de espera")
+        print("----------------------------------")
+        main_menu()
 
 
 
